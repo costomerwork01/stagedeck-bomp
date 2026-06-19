@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>คำนวณราคาเวที</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        .grid-cell {
+            width: 50px; height: 50px;
+            border: 1px solid #ccc;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; cursor: pointer;
+        }
+        .stage-115 { background-color: #facc15; border: 2px solid #eab308; }
+        .stage-60 { background-color: #86efac; border: 2px solid #4ade80; }
+        .preview-container {
+            display: grid; gap: 4px; background: #f3f4f6; padding: 10px; border: 2px solid #e5e7eb;
+        }
+        .accessory-item { transition: all 0.2s; }
+        .accessory-item:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="max-w-7xl mx-auto p-4">
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="bg-gradient-to-r from-yellow-400 to-amber-500 p-6 text-white">
+                <h1 class="text-3xl font-bold text-center">🛠 คำนวณราคาเวที</h1>
+                <p class="text-center mt-2 opacity-90">ออกแบบและคำนวณราคาเวทีได้ตามต้องการ</p>
+            </div>
+
+            <div class="flex flex-col lg:flex-row">
+                <!-- LEFT PANEL -->
+                <div class="w-full lg:w-80 border-r p-6 bg-gray-50">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <i class="fas fa-cube"></i> เลือกแบบเวที
+                    </h2>
+                    <div id="stage-list" class="space-y-3"></div>
+
+                    <div class="mt-8">
+                        <h3 class="font-medium mb-2 text-gray-700">ข้อมูลเวที</h3>
+                        <div id="selected-info" class="bg-white p-4 rounded-lg border text-sm">
+                            <p class="text-gray-500">ยังไม่ได้เลือกเวที</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-6">
+                        <h3 class="font-medium mb-2 text-gray-700">ขนาดพื้นที่จัดวาง</h3>
+                        <div id="area-info" class="bg-white p-4 rounded-lg border text-sm">
+                            <p class="text-gray-500">ยังไม่ได้วางเวทีใด ๆ</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CENTER -->
+                <div class="flex-1 p-6">
+                    <div class="mb-6">
+                        <div class="flex justify-between items-center mb-3">
+                            <h2 class="text-xl font-semibold flex items-center gap-2">
+                                <i class="fas fa-eye"></i> ตัวอย่างการจัดวาง
+                            </h2>
+                            <button onclick="clearAll()" 
+                                    class="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-sm flex items-center gap-2">
+                                <i class="fas fa-trash"></i> ล้างทั้งหมด
+                            </button>
+                        </div>
+                        <div id="preview" class="preview-container mx-auto" style="grid-template-columns: repeat(6, 60px); width: fit-content;"></div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-3">
+                            <h2 class="text-xl font-semibold">ตารางจัดวางเวที</h2>
+                            <div class="flex items-center gap-4 text-sm">
+                                <div class="flex items-center gap-2"><div class="w-5 h-5 bg-yellow-400 border-2 border-yellow-600"></div><span>115 cm</span></div>
+                                <div class="flex items-center gap-2"><div class="w-5 h-5 bg-green-400 border-2 border-green-600"></div><span>60 cm</span></div>
+                            </div>
+                        </div>
+                        <div id="main-grid" class="grid grid-cols-10 gap-1 mx-auto" style="width: fit-content;"></div>
+                    </div>
+                </div>
+
+                <!-- RIGHT PANEL -->
+                <div class="w-full lg:w-80 border-l p-6 bg-gray-50">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <i class="fas fa-tools"></i> อะไหล่ประกอบ
+                    </h2>
+                    <div id="accessories-list" class="space-y-4"></div>
+
+                    <div class="mt-8 pt-6 border-t">
+                        <h2 class="text-xl font-semibold mb-4">สรุปราคา</h2>
+                        <div id="price-summary" class="bg-white rounded-2xl p-6 shadow-sm border space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center text-gray-500 text-sm mt-6">
+            ราคาเป็นราคาประมาณการ • อาจมีการปรับราคาตามโปรโมชั่น
+        </div>
+    </div>
+
+    <script>
+        const stages = [
+            { id: 1, name: "115×60×20", width: 115, depth: 60, height: 20, priceLite: 2800, pricePlus: 3100 },
+            { id: 2, name: "115×60×40", width: 115, depth: 60, height: 40, priceLite: 3200, pricePlus: 3500 },
+            { id: 3, name: "115×60×60", width: 115, depth: 60, height: 60, priceLite: 3400, pricePlus: 3950 },
+            { id: 4, name: "115×60×80", width: 115, depth: 60, height: 80, priceLite: 3700, pricePlus: 4350 },
+            { id: 5, name: "60×60×20", width: 60, depth: 60, height: 20, priceLite: 1600, pricePlus: 1800 },
+            { id: 6, name: "60×60×40", width: 60, depth: 60, height: 40, priceLite: 1800, pricePlus: 2100 },
+            { id: 7, name: "60×60×60", width: 60, depth: 60, height: 60, priceLite: 2000, pricePlus: 2500 },
+            { id: 8, name: "60×60×80", width: 60, depth: 60, height: 80, priceLite: 2200, pricePlus: 2800 },
+        ];
+
+        const accessories = [
+            { id: 1, name: "Plat 1 รู", price: 20, img: "⬛" },
+            { id: 2, name: "Plat 2 รู", price: 30, img: "⬛" },
+            { id: 3, name: "Plat 3 รู", price: 40, img: "⬛" },
+            { id: 4, name: "Plat 4 รู", price: 50, img: "⬛" },
+            { id: 5, name: "ชุดน็อต+สลักเกลียว", price: 40, img: "🔩" },
+        ];
+
+        let selectedStage = null;
+        let placedStages = [];
+        let selectedAccessories = {};
+
+        const GRID_SIZE = 10;
+
+        function renderStageList() {
+            const container = document.getElementById('stage-list');
+            container.innerHTML = '';
+            stages.forEach(stage => {
+                const div = document.createElement('div');
+                div.className = `p-4 rounded-xl border cursor-pointer transition-all ${selectedStage && selectedStage.id === stage.id ? 'border-yellow-500 bg-yellow-50' : 'hover:border-gray-300'}`;
+                div.innerHTML = `
+                    <div class="flex justify-between">
+                        <div><div class="font-semibold">${stage.name} cm</div></div>
+                        <div class="text-right">
+                            <div class="font-bold text-yellow-600">${stage.priceLite} (Lite)</div>
+                            <div class="font-bold text-amber-600">${stage.pricePlus} (Plus)</div>
+                        </div>
+                    </div>
+                `;
+                div.onclick = () => {
+                    selectedStage = stage;
+                    renderStageList();
+                    updateSelectedInfo();
+                };
+                container.appendChild(div);
+            });
+        }
+
+        function updateSelectedInfo() {
+            const el = document.getElementById('selected-info');
+            if (!selectedStage) {
+                el.innerHTML = `<p class="text-gray-500">ยังไม่ได้เลือกเวที</p>`;
+                return;
+            }
+            el.innerHTML = `
+                <div class="font-medium">${selectedStage.name} cm</div>
+                <div class="text-sm text-gray-600 mt-1">
+                    Lite: <span class="font-bold">${selectedStage.priceLite} บาท</span><br>
+                    Plus: <span class="font-bold">${selectedStage.pricePlus} บาท</span>
+                </div>
+            `;
+        }
+
+        function createGrid() {
+            const grid = document.getElementById('main-grid');
+            grid.innerHTML = '';
+            grid.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 48px)`;
+            for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell bg-white hover:bg-gray-50';
+                cell.dataset.index = i;
+                cell.addEventListener('click', () => placeStage(i));
+                grid.appendChild(cell);
+            }
+        }
+
+        function placeStage(index) {
+            if (!selectedStage) return alert("กรุณาเลือกแบบเวทีก่อน");
+            const existing = placedStages.findIndex(s => s.index === index);
+            if (existing !== -1) placedStages.splice(existing, 1);
+            else placedStages.push({ index, ...selectedStage });
+
+            renderPreview();
+            updateAreaInfo();
+            updatePriceSummary();
+        }
+
+        function updateAreaInfo() {
+            const areaDiv = document.getElementById('area-info');
+            if (placedStages.length === 0) {
+                areaDiv.innerHTML = `<p class="text-gray-500">ยังไม่ได้วางเวทีใด ๆ</p>`;
+                return;
+            }
+
+            const rowWidths = new Array(10).fill(0);
+            const colDepths = new Array(10).fill(0);
+
+            placedStages.forEach(stage => {
+                const row = Math.floor(stage.index / 10);
+                const col = stage.index % 10;
+                rowWidths[row] += stage.width;
+                colDepths[col] += stage.depth;
+            });
+
+            const maxWidth = Math.max(...rowWidths);
+            const maxDepth = Math.max(...colDepths);
+
+            areaDiv.innerHTML = `
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <div class="text-xs text-gray-500">ความกว้าง</div>
+                        <div class="text-3xl font-bold text-amber-600">${maxWidth} <span class="text-xl">cm</span></div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500">ความลึก</div>
+                        <div class="text-3xl font-bold text-amber-600">${maxDepth} <span class="text-xl">cm</span></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPreview() {
+            const preview = document.getElementById('preview');
+            preview.innerHTML = '';
+            for (let i = 0; i < 36; i++) {
+                const cell = document.createElement('div');
+                cell.style.width = '55px'; cell.style.height = '55px';
+                cell.className = 'flex items-center justify-center text-xs font-bold border border-gray-300 rounded';
+                if (i < 9 && i % 3 !== 2) {
+                    cell.classList.add('stage-115');
+                    cell.textContent = '115';
+                } else {
+                    cell.style.backgroundColor = '#f3f4f6';
+                }
+                preview.appendChild(cell);
+            }
+
+            document.querySelectorAll('#main-grid .grid-cell').forEach((cell, idx) => {
+                const placed = placedStages.find(s => s.index === idx);
+                if (placed) {
+                    cell.className = `grid-cell ${placed.width === 115 ? 'stage-115' : 'stage-60'}`;
+                    cell.textContent = placed.width;
+                } else {
+                    cell.className = 'grid-cell bg-white hover:bg-gray-50';
+                    cell.textContent = '';
+                }
+            });
+        }
+
+        function renderAccessories() {
+            const container = document.getElementById('accessories-list');
+            container.innerHTML = '';
+            accessories.forEach(acc => {
+                const div = document.createElement('div');
+                div.className = 'accessory-item flex items-center justify-between bg-white p-4 rounded-xl border';
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-2xl">${acc.img}</div>
+                        <div>
+                            <div class="font-medium">${acc.name}</div>
+                            <div class="text-sm text-emerald-600 font-bold">${acc.price} บาท/ชิ้น</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="changeAccessory(${acc.id}, -1)" class="w-8 h-8 border rounded-lg hover:bg-gray-100">-</button>
+                        <span id="acc-count-${acc.id}" class="w-8 text-center font-mono">0</span>
+                        <button onclick="changeAccessory(${acc.id}, 1)" class="w-8 h-8 border rounded-lg hover:bg-gray-100">+</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function changeAccessory(id, delta) {
+            if (!selectedAccessories[id]) selectedAccessories[id] = 0;
+            selectedAccessories[id] = Math.max(0, selectedAccessories[id] + delta);
+            document.getElementById(`acc-count-${id}`).textContent = selectedAccessories[id];
+            updatePriceSummary();
+        }
+
+        function updatePriceSummary() {
+            let liteTotal = 0;
+            let plusTotal = 0;
+            let html = '';
+
+            if (placedStages.length > 0) {
+                liteTotal = placedStages.reduce((sum, s) => sum + s.priceLite, 0);
+                plusTotal = placedStages.reduce((sum, s) => sum + s.pricePlus, 0);
+
+                html += `
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">เวที (${placedStages.length} ชิ้น) - Lite</span>
+                        <span class="font-medium">${liteTotal} บาท</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">เวที (${placedStages.length} ชิ้น) - Plus</span>
+                        <span class="font-medium">${plusTotal} บาท</span>
+                    </div>
+                `;
+            }
+
+            Object.keys(selectedAccessories).forEach(id => {
+                if (selectedAccessories[id] > 0) {
+                    const acc = accessories.find(a => a.id == id);
+                    const subtotal = acc.price * selectedAccessories[id];
+                    liteTotal += subtotal;
+                    plusTotal += subtotal;
+                    html += `
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">${acc.name} × ${selectedAccessories[id]}</span>
+                            <span class="font-medium">${subtotal} บาท</span>
+                        </div>
+                    `;
+                }
+            });
+
+            html += `
+                <div class="pt-4 border-t mt-4 space-y-2">
+                    <div class="flex justify-between text-lg font-bold">
+                        <span class="text-amber-600">รวม Lite</span>
+                        <span>${liteTotal.toLocaleString()} บาท</span>
+                    </div>
+                    <div class="flex justify-between text-xl font-bold">
+                        <span class="text-amber-600">รวม Plus</span>
+                        <span>${plusTotal.toLocaleString()} บาท</span>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('price-summary').innerHTML = html;
+        }
+
+        function clearAll() {
+            if (confirm("ล้างการจัดวางทั้งหมด?")) {
+                placedStages = [];
+                selectedAccessories = {};
+                renderPreview();
+                updateAreaInfo();
+                updatePriceSummary();
+                accessories.forEach(acc => {
+                    const el = document.getElementById(`acc-count-${acc.id}`);
+                    if (el) el.textContent = '0';
+                });
+            }
+        }
+
+        window.onload = () => {
+            renderStageList();
+            createGrid();
+            renderAccessories();
+            renderPreview();
+            updateAreaInfo();
+            updatePriceSummary();
+        };
+    </script>
+</body>
+</html>
